@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { cvFileUrl } from "../api";
+import { A2uiReviewPanel } from "./A2uiReviewPanel";
 import type {
   ApplicationDetail,
   ApplicationState,
@@ -15,6 +16,7 @@ interface ApplicationsPanelProps {
   onRefresh: () => Promise<void>;
   onQueue: (appId: number, confirmNotSent?: boolean) => Promise<void>;
   onUpdateState: (appId: number, state: ApplicationState, reason: string) => Promise<void>;
+  onA2UIUpdated: (updated: ApplicationDetail, message: string) => void;
 }
 
 const STATE_TABS: { key: "all" | ApplicationState; label: string }[] = [
@@ -75,10 +77,12 @@ export function ApplicationsPanel({
   onRefresh,
   onQueue,
   onUpdateState,
+  onA2UIUpdated,
 }: ApplicationsPanelProps) {
   const headingId = useId();
   const [filter, setFilter] = useState<"all" | ApplicationState>("all");
   const [editingStateId, setEditingStateId] = useState<number | null>(null);
+  const [reviewOpenIds, setReviewOpenIds] = useState<Record<number, boolean>>({});
   const [nextState, setNextState] = useState<ApplicationState>("in_progress");
   const [stateReason, setStateReason] = useState("");
 
@@ -312,7 +316,41 @@ export function ApplicationsPanel({
                     >
                       {editingStateId === app.id ? "Close status update" : "Update status"}
                     </button>
+
+                    {app.state === "pending" && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        aria-expanded={
+                          reviewOpenIds[app.id] ??
+                          Boolean(item.latestEvaluation?.missingAnswers?.length)
+                        }
+                        onClick={() =>
+                          setReviewOpenIds((prev) => {
+                            const current =
+                              prev[app.id] ??
+                              Boolean(item.latestEvaluation?.missingAnswers?.length);
+                            return { ...prev, [app.id]: !current };
+                          })
+                        }
+                      >
+                        {(reviewOpenIds[app.id] ??
+                        Boolean(item.latestEvaluation?.missingAnswers?.length))
+                          ? "Hide A2UI Review"
+                          : "Open A2UI Review"}
+                      </button>
+                    )}
                   </div>
+
+                  {app.state === "pending" &&
+                    (reviewOpenIds[app.id] ??
+                      Boolean(item.latestEvaluation?.missingAnswers?.length)) && (
+                      <A2uiReviewPanel
+                        applicationId={app.id}
+                        revisionKey={`${app.latestEvaluationId ?? 0}-${app.updatedAt}`}
+                        onUpdated={onA2UIUpdated}
+                      />
+                    )}
 
                   {editingStateId === app.id && (
                     <form

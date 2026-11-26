@@ -31,6 +31,7 @@ type Dependencies struct {
 
 type Worker struct {
 	mu              sync.RWMutex
+	dispatchMu      sync.Mutex
 	state           string
 	paused          bool
 	lastError       string
@@ -150,6 +151,8 @@ func (w *Worker) ProcessOnce(ctx context.Context) (bool, error) {
 	if w.store == nil {
 		return false, nil
 	}
+	w.dispatchMu.Lock()
+	defer w.dispatchMu.Unlock()
 
 	w.mu.RLock()
 	paused := w.paused
@@ -293,6 +296,13 @@ func (w *Worker) Status() Status {
 
 func (w *Worker) Wait() {
 	<-w.done
+}
+
+// WithExclusive pauses worker dispatches while fn runs (used during live SQLite backup restore).
+func (w *Worker) WithExclusive(fn func() error) error {
+	w.dispatchMu.Lock()
+	defer w.dispatchMu.Unlock()
+	return fn()
 }
 
 func (w *Worker) setReconnectStatus(needsReconnect bool, errMsg string) {

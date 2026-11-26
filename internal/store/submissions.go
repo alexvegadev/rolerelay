@@ -429,6 +429,42 @@ func (s *Store) RecordApplicationState(ctx context.Context, appID int64, toState
 	return s.GetApplicationDetailed(ctx, appID)
 }
 
+func (s *Store) SaveApplicationA2UIAnswers(ctx context.Context, appID int64, answers map[string]any, reason string) error {
+	raw, err := json.Marshal(answers)
+	if err != nil {
+		return fmt.Errorf("marshal a2ui answers: %w", err)
+	}
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var currentState string
+	if err := tx.QueryRowContext(ctx, `SELECT state FROM applications WHERE id = ? AND profile_id = ?`, appID, DefaultProfileID).Scan(&currentState); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE applications
+		SET a2ui_answers_json = ?, updated_at = ?
+		WHERE id = ? AND profile_id = ?
+	`, string(raw), now, appID, DefaultProfileID); err != nil {
+		return fmt.Errorf("save a2ui answers: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO state_changes (application_id, from_state, to_state, reason, source, created_at)
+		VALUES (?, ?, ?, ?, 'a2ui', ?)
+	`, appID, currentState, currentState, reason, now); err != nil {
+		return fmt.Errorf("record a2ui state change: %w", err)
+	}
+	return tx.Commit()
+}
+
 type RecoverySummary struct {
 	MarkedUncertain int
 	MarkedRetryable int

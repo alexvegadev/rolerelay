@@ -184,7 +184,7 @@ func extractRequirements(title, description string) []parsedRequirement {
 		if strings.Contains(lower, "@") && (strings.Contains(lower, "send") || strings.Contains(lower, "enviar") || strings.Contains(lower, "apply")) {
 			continue
 		}
-		if salaryPromptRe.MatchString(cleaned) && len(extractKeywords(cleaned)) <= 2 {
+		if salaryPromptRe.MatchString(cleaned) {
 			continue
 		}
 

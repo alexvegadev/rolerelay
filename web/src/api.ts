@@ -249,6 +249,51 @@ export async function testEmailConnection(recipient: string): Promise<{
   return parseResponse<{ ok: boolean; recipient: string; messageId: string }>(res);
 }
 
+export interface A2UIPanelPayload {
+  surfaceId: string;
+  catalogId: string;
+  reviewCases: string[];
+  hasInputs: boolean;
+  messages: unknown[];
+}
+
+export async function fetchApplicationA2UI(id: number): Promise<{
+  panel: A2UIPanelPayload;
+  application: ApplicationDetail;
+}> {
+  const res = await fetch(`/api/applications/${id}/a2ui`, { cache: "no-store" });
+  return parseResponse<{ panel: A2UIPanelPayload; application: ApplicationDetail }>(res);
+}
+
+export async function sendApplicationA2UIEvent(
+  id: number,
+  envelope: {
+    version: "1.0";
+    action: {
+      name: string;
+      surfaceId: string;
+      sourceComponentId: string;
+      timestamp: string;
+      context: Record<string, unknown>;
+    };
+  }
+): Promise<{
+  message: string;
+  application: ApplicationDetail;
+  panel: A2UIPanelPayload;
+}> {
+  const res = await fetch(`/api/applications/${id}/a2ui/event`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(envelope),
+  });
+  return parseResponse<{
+    message: string;
+    application: ApplicationDetail;
+    panel: A2UIPanelPayload;
+  }>(res);
+}
+
 export async function pauseWorker(): Promise<{ worker: WorkerStatus }> {
   const res = await fetch("/api/worker/pause", { method: "POST" });
   return parseResponse<{ worker: WorkerStatus }>(res);
@@ -266,4 +311,37 @@ export async function exitApp(): Promise<{ exiting: boolean; message: string }> 
 
 export function cvFileUrl(id: number, download = false): string {
   return download ? `/api/cvs/${id}/file?download=1` : `/api/cvs/${id}/file`;
+}
+
+export function backupExportUrl(): string {
+  return "/api/backup/export";
+}
+
+export interface RestoreSummary {
+  schemaVersion: number;
+  cvCount: number;
+  vacancyCount: number;
+  evaluationCount: number;
+  applicationCount: number;
+  attemptCount: number;
+  stateChangeCount: number;
+  safetyBackupPath?: string;
+}
+
+export async function restoreBackup(file: File): Promise<{
+  restored: boolean;
+  summary: RestoreSummary;
+  emailSettings: EmailSettings;
+}> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/api/backup/restore", {
+    method: "POST",
+    body: form,
+  });
+  return parseResponse<{
+    restored: boolean;
+    summary: RestoreSummary;
+    emailSettings: EmailSettings;
+  }>(res);
 }

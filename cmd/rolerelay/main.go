@@ -59,18 +59,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("open database: %v", err)
 	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			log.Printf("close database: %v", err)
-		}
-	}()
 
 	schemaVer, err := db.SchemaVersion(ctx, conn)
 	if err != nil {
+		_ = conn.Close()
 		log.Fatalf("read schema version: %v", err)
 	}
 
-	repo := store.New(conn)
+	repo := store.NewWithPath(conn, paths.DBPath)
+	defer func() {
+		if err := repo.Close(); err != nil {
+			log.Printf("close database: %v", err)
+		}
+	}()
 	if _, err := repo.GetOrCreateProfile(ctx); err != nil {
 		log.Fatalf("initialize default profile: %v", err)
 	}

@@ -253,7 +253,7 @@ func EvaluateVacancy(
 		params.ApplicationState = domain.StatePending
 		if channel == "email" {
 			params.Subject = buildApplicationSubject(vacancy, selection.TargetLanguage)
-			params.Body = buildApplicationBody(profile, vacancy, selection.TargetLanguage)
+			params.Body = buildApplicationBody(profile, vacancy, selection.TargetLanguage, existingAnswers)
 			if profile.AutoSendEnabled {
 				params.QueuedForSend = true
 				params.PendingReason = fmt.Sprintf("Qualified (%d%% fit). Queued for automatic email submission to %s.", fitScore, recipient)
@@ -277,13 +277,27 @@ func buildApplicationSubject(v domain.Vacancy, targetLang string) string {
 	return fmt.Sprintf("Application: %s", v.Title)
 }
 
-func buildApplicationBody(p domain.Profile, v domain.Vacancy, targetLang string) string {
+func buildApplicationBody(p domain.Profile, v domain.Vacancy, targetLang string, answers map[string]any) string {
 	name := strings.TrimSpace(p.FullName)
 	if name == "" {
 		name = "Candidate"
 	}
-	if targetLang == "es" {
-		return fmt.Sprintf("Hola equipo de %s,\n\nAdjunto mi CV para la posición de %s.\n\nSaludos,\n%s", v.CompanyName, v.Title, name)
+	extra := ""
+	if answers != nil {
+		if sal, ok := answers["salary_expectation"].(map[string]any); ok {
+			amt := sal["amount"]
+			cur := sal["currency"]
+			if amt != nil && cur != nil {
+				if targetLang == "es" {
+					extra = fmt.Sprintf("\n\nPretensión salarial: %v %v", cur, amt)
+				} else {
+					extra = fmt.Sprintf("\n\nSalary expectation: %v %v", cur, amt)
+				}
+			}
+		}
 	}
-	return fmt.Sprintf("Hello %s team,\n\nPlease find my CV attached for the %s position.\n\nBest regards,\n%s", v.CompanyName, v.Title, name)
+	if targetLang == "es" {
+		return fmt.Sprintf("Hola equipo de %s,\n\nAdjunto mi CV para la posición de %s.%s\n\nSaludos,\n%s", v.CompanyName, v.Title, extra, name)
+	}
+	return fmt.Sprintf("Hello %s team,\n\nPlease find my CV attached for the %s position.%s\n\nBest regards,\n%s", v.CompanyName, v.Title, extra, name)
 }

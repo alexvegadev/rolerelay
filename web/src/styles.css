@@ -1238,3 +1238,94 @@ dialog::backdrop {
 .history-details[open] summary {
   margin-bottom: 0.5rem;
 }
+
+/* Phase 4 A2UI v1.0 Review Panel styles */
+.a2ui-panel-container {
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: var(--surface);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.a2ui-panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.a2ui-panel-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--brand);
+}
+
+.a2ui-surface-host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.a2ui-review-banner {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  color: var(--warn-text);
+  border-radius: 0.6rem;
+  padding: 0.8rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.a2ui-review-banner-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.a2ui-review-banner-title {
+  font-size: 0.95rem;
+}
+
+.a2ui-review-banner-desc {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.a2ui-case-tags,
+.a2ui-evidence-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.a2ui-evidence-card {
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--bg);
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.a2ui-evidence-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.a2ui-evidence-req {
+  font-weight: 600;
+  font-size: 0.9rem;
+}

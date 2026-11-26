@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"rolerelay/internal/domain"
@@ -38,11 +39,26 @@ func (e *ValidationError) Unwrap() error {
 }
 
 type Store struct {
-	db *sql.DB
+	mu     sync.Mutex
+	db     *sql.DB
+	dbPath string
 }
 
 func New(db *sql.DB) *Store {
 	return &Store{db: db}
+}
+
+func NewWithPath(db *sql.DB, dbPath string) *Store {
+	return &Store{db: db, dbPath: dbPath}
+}
+
+func (s *Store) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.db == nil {
+		return nil
+	}
+	return s.db.Close()
 }
 
 func (s *Store) GetOrCreateProfile(ctx context.Context) (domain.Profile, error) {

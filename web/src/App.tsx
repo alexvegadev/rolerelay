@@ -19,6 +19,7 @@ import {
   fetchVacancies,
   pauseWorker,
   queueApplication,
+  restoreBackup,
   resumeWorker,
   saveEmailSettings,
   saveModelSettings,
@@ -28,7 +29,9 @@ import {
   updateApplicationState,
   uploadCV,
 } from "./api";
+import type { RestoreSummary } from "./api";
 import { ApplicationsPanel } from "./components/ApplicationsPanel";
+import { BackupRestorePanel } from "./components/BackupRestorePanel";
 import { CvManager } from "./components/CvManager";
 import { CvPreviewDialog } from "./components/CvPreviewDialog";
 import { ExitDialog } from "./components/ExitDialog";
@@ -112,6 +115,11 @@ export function App() {
   const [savingModel, setSavingModel] = useState(false);
   const [modelError, setModelError] = useState<string | null>(null);
   const [modelSuccess, setModelSuccess] = useState<string | null>(null);
+
+  const [restoringBackup, setRestoringBackup] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
+  const [lastRestoreSummary, setLastRestoreSummary] = useState<RestoreSummary | null>(null);
 
   const [workerBusy, setWorkerBusy] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
@@ -427,6 +435,28 @@ export function App() {
     }
   };
 
+  const handleRestoreBackup = async (file: File): Promise<boolean> => {
+    setRestoringBackup(true);
+    setBackupError(null);
+    setBackupSuccess(null);
+    try {
+      const res = await restoreBackup(file);
+      setLastRestoreSummary(res.summary);
+      await loadAll();
+      setBackupSuccess(
+        res.emailSettings.needsReconnect
+          ? `Backup restored (${res.summary.cvCount} CVs, ${res.summary.applicationCount} applications). Reconnect your sending account password in this machine's OS credential store.`
+          : `Backup restored (${res.summary.cvCount} CVs, ${res.summary.applicationCount} applications, ${res.summary.evaluationCount} evaluations).`
+      );
+      return true;
+    } catch (err) {
+      setBackupError(err instanceof ApiError ? err.message : "Could not restore backup.");
+      return false;
+    } finally {
+      setRestoringBackup(false);
+    }
+  };
+
   const handleToggleWorker = async () => {
     if (!status) return;
     setWorkerBusy(true);
@@ -542,7 +572,7 @@ export function App() {
               aria-current={section === "settings" ? "page" : undefined}
               onClick={() => setSection("settings")}
             >
-              Sending &amp; AI Settings
+              Settings &amp; Backup
             </button>
           </div>
         </nav>
@@ -647,11 +677,26 @@ export function App() {
                 onRefresh={refreshApplications}
                 onQueue={handleQueueApplication}
                 onUpdateState={handleUpdateAppState}
+                onA2UIUpdated={(updated, message) => {
+                  setApplications((prev) =>
+                    prev.map((a) => (a.application.id === updated.application.id ? updated : a))
+                  );
+                  setAppSuccess(message);
+                }}
               />
             )}
 
             {section === "settings" && (
               <div className="vacancies-layout">
+                <BackupRestorePanel
+                  dbPath={status.dbPath}
+                  restoring={restoringBackup}
+                  errorMessage={backupError}
+                  successMessage={backupSuccess}
+                  lastSummary={lastRestoreSummary}
+                  onRestore={handleRestoreBackup}
+                />
+
                 <SendingSettingsPanel
                   settings={emailSettings}
                   saving={savingEmail}
@@ -679,7 +724,8 @@ export function App() {
                 <code>{status.address}</code>
               </span>
               <span>
-                Phase 3 Automatic Submission active · Next: A2UI Review Panel, Backup &amp; Restore
+                All MVP milestones active · Portable &amp; Installed SQLite · Bilingual Evaluation ·
+                SMTP Worker · A2UI v1.0 · Backup &amp; Restore
               </span>
             </footer>
           </>
