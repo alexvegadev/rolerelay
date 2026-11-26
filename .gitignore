@@ -1,0 +1,19 @@
+# Build outputs
+/dist/
+/bin/
+/rolerelay.exe
+/cmd/installer/payload/rolerelay.exe
+
+# Embedded frontend build artifacts (keep placeholder)
+/internal/webui/dist/*
+!/internal/webui/dist/.gitkeep
+
+# Frontend tooling
+/web/node_modules/
+
+# Local runtime data
+/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+portable.mode
